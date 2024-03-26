@@ -1,0 +1,40 @@
+import = ["/Users/asingh/.config/alacritty/catppuccin/catppuccin-mocha.toml"]
+live_config_reload = true
+
+[env]
+TERM = "xterm-256color"
+
+[font]
+normal.family = "JetBrainsMono Nerd Font" 
+normal.style = "Medium"
+
+bold.family = "JetBrainsMono Nerd Font" 
+bold.style = "Bold"
+
+italic.family = "JetBrainsMono Nerd Font"
+italic.style = "Medium Italic"
+
+bold_italic.family = "JetBrainsMono Nerd Font"
+bold_italic.style = "Heavy Italic"
+
+[window.padding]
+x = 10
+y = 10
+
+[window]
+decorations = "buttonless"
+dynamic_padding = false
+opacity = 1.0
+
+[shell]
+program = "/usr/bin/zsh"
+
+[scrolling]
+history = 10000
+multiplier = 3
+
+[[keyboard.bindings]]
+action = "SpawnNewInstance"
+key = "Return"
+mods = "Control|Shift"
+

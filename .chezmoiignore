@@ -1,0 +1,5 @@
+README.md
+.config/nvim/*.log
+.config/nvim/.luacheckrc
+.config/nvim/.luarc.json
+.config/tmux/plugins/
