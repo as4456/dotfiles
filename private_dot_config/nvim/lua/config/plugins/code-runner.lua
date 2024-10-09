@@ -32,11 +32,11 @@ return {
 			-- Iron doesn't set keymaps by default anymore.
 			-- You can set them here or manually add keymaps to the functions in iron.core
 			keymaps = {
-				send_motion = "<space>sc",
-				visual_send = "<space>sc",
-				send_file = "<space>sf",
-				send_line = "<space>sl",
-				send_mark = "<space>sm",
+				send_motion = "<space>rc",
+				visual_send = "<space>rc",
+				send_file = "<space>rf",
+				send_line = "<space>rl",
+				send_mark = "<space>rm",
 				mark_motion = "<space>mc",
 				mark_visual = "<space>mc",
 				remove_mark = "<space>md",
