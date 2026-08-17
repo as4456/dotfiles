@@ -1,0 +1,130 @@
+# Managed by chezmoi. Edit .chezmoitemplates/alacritty.toml, not this file.
+#
+# One body, two targets: ~/.config/alacritty/alacritty.toml on Linux and macOS,
+# %APPDATA%\alacritty\alacritty.toml on Windows. Alacritty has no XDG fallback on
+# Windows, so the same content has to be written to two unrelated paths.
+#
+# Schema is Alacritty 0.14+: `import` and `live_config_reload` live under [general],
+# `shell` lives under [terminal]. Verified against alacritty.org/config-alacritty.html.
+
+[general]
+live_config_reload = true
+
+[env]
+# Alacritty ships its own `alacritty` terminfo, but it is not present on a base
+# Ubuntu install and tmux refuses to start when default-terminal has no entry.
+# Advertising xterm-256color is the portable choice; true colour still works because
+# COLORTERM is exported by the shell and tmux declares RGB via terminal-features.
+TERM = "xterm-256color"
+
+[font]
+size = 11.0
+normal = { family = "JetBrainsMono Nerd Font", style = "Medium" }
+bold = { family = "JetBrainsMono Nerd Font", style = "Bold" }
+italic = { family = "JetBrainsMono Nerd Font", style = "Medium Italic" }
+# Styles must match a real face name. JetBrains Mono's weights are Thin, ExtraLight,
+# Light, Regular, Medium, SemiBold, Bold, ExtraBold — there is no "Heavy", so naming it
+# would silently fall back to a substituted font.
+bold_italic = { family = "JetBrainsMono Nerd Font", style = "Bold Italic" }
+
+[window]
+{{- if eq .chezmoi.os "darwin" }}
+decorations = "Buttonless"
+option_as_alt = "Both"
+{{- else }}
+# "Buttonless" is documented macOS-only.
+decorations = "Full"
+{{- end }}
+dynamic_padding = false
+opacity = 1.0
+padding = { x = 10, y = 10 }
+
+[scrolling]
+history = 10000
+multiplier = 3
+
+[terminal]
+{{- if eq .chezmoi.os "windows" }}
+# Boot straight into WSL rather than PowerShell. --cd ~ stops you landing in
+# /mnt/c/Windows/System32.
+#
+# The distro name must match `wsl.exe -l -q` exactly — it is "Ubuntu-24.04", not
+# "Ubuntu", and the wrong name fails with "no distribution with the supplied name".
+# Pinning is worth it rather than relying on the default, because a second distro
+# (OldUbuntu) is registered and defaults can move.
+shell = { program = "wsl.exe", args = ["-d", "Ubuntu-24.04", "--cd", "~"] }
+{{- else }}
+# Deliberately no `shell` setting: Alacritty then uses the login shell from
+# /etc/passwd. Hardcoding /usr/bin/zsh breaks the terminal outright if zsh is absent.
+{{- end }}
+
+[[keyboard.bindings]]
+# Alacritty has no tabs by design, so a new window is the closest equivalent.
+key = "Return"
+mods = "Control|Shift"
+action = "SpawnNewInstance"
+
+# Catppuccin Mocha, inlined rather than imported. The committed config imported this
+# palette from /Users/asingh/... which does not exist off macOS, so the theme silently
+# never loaded. Inlining removes the whole class of failure.
+[colors.primary]
+background = "#1E1E2E"
+foreground = "#CDD6F4"
+dim_foreground = "#7F849C"
+bright_foreground = "#CDD6F4"
+
+[colors.cursor]
+text = "#1E1E2E"
+cursor = "#F5E0DC"
+
+[colors.vi_mode_cursor]
+text = "#1E1E2E"
+cursor = "#B4BEFE"
+
+[colors.search.matches]
+foreground = "#1E1E2E"
+background = "#A6ADC8"
+
+[colors.search.focused_match]
+foreground = "#1E1E2E"
+background = "#A6E3A1"
+
+[colors.hints.start]
+foreground = "#1E1E2E"
+background = "#F9E2AF"
+
+[colors.hints.end]
+foreground = "#1E1E2E"
+background = "#A6ADC8"
+
+[colors.selection]
+text = "#1E1E2E"
+background = "#F5E0DC"
+
+[colors.normal]
+black = "#45475A"
+red = "#F38BA8"
+green = "#A6E3A1"
+yellow = "#F9E2AF"
+blue = "#89B4FA"
+magenta = "#F5C2E7"
+cyan = "#94E2D5"
+white = "#BAC2DE"
+
+[colors.bright]
+black = "#585B70"
+red = "#F38BA8"
+green = "#A6E3A1"
+yellow = "#F9E2AF"
+blue = "#89B4FA"
+magenta = "#F5C2E7"
+cyan = "#94E2D5"
+white = "#A6ADC8"
+
+[[colors.indexed_colors]]
+index = 16
+color = "#FAB387"
+
+[[colors.indexed_colors]]
+index = 17
+color = "#F5E0DC"

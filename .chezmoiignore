@@ -1,5 +1,38 @@
+# chezmoi always treats this file as a template, whether or not it ends in .tmpl.
+#
+# The logic is INVERTED from what you expect: chezmoi manages everything by default,
+# so to make a file OS-specific you ignore it everywhere it does NOT belong. The `ne`
+# comparisons below are deliberate, not typos.
+#
+# Patterns match TARGET paths (.config/nvim), never source paths (private_dot_config/nvim).
+
 README.md
+docs/**
+
+# Neovim runtime droppings that should never be managed.
 .config/nvim/*.log
 .config/nvim/.luacheckrc
 .config/nvim/.luarc.json
+
+# tpm clones plugins in place; they are not ours to track.
 .config/tmux/plugins/
+
+# Powerlevel10k is superseded by starship. Kept in the repo rather than deleted so the
+# switch is reversible, but not applied to any machine.
+.p10k.zsh
+
+{{- if ne .chezmoi.os "windows" }}
+# Alacritty on Windows reads only %APPDATA%\alacritty\alacritty.toml and has no XDG
+# fallback, so that target exists solely for Windows.
+AppData/**
+{{- end }}
+
+{{- if eq .chezmoi.os "windows" }}
+# ...and conversely, the XDG location is meaningless there.
+.config/alacritty/**
+# These all live inside WSL on a Windows host, not in the Windows home directory.
+.zshrc
+.config/starship.toml
+.config/tmux/**
+.config/nvim/**
+{{- end }}
