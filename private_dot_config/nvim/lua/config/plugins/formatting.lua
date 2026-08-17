@@ -19,10 +19,14 @@ return {
 				markdown = { "prettier" },
 				graphql = { "prettier" },
 				lua = { "stylua" },
-				python = { "ruff" },
+				-- "ruff" is not a conform formatter name, so Python formatting silently
+				-- fell through to the LSP. The real names are ruff_organize_imports,
+				-- ruff_fix and ruff_format. Order matters: sort imports, then fix
+				-- lint violations, then format.
+				python = { "ruff_organize_imports", "ruff_fix", "ruff_format" },
 			},
 			format_on_save = {
-				lsp_fallback = true,
+				lsp_format = "fallback",
 				async = false,
 				timeout_ms = 1000,
 			},
@@ -30,7 +34,7 @@ return {
 
 		vim.keymap.set({ "n", "v" }, "<leader>mp", function()
 			conform.format({
-				lsp_fallback = true,
+				lsp_format = "fallback",
 				async = false,
 				timeout_ms = 1000,
 			})

@@ -1,226 +1,160 @@
+-- Rewritten for mason-lspconfig 2.x and Neovim 0.11+.
+--
+-- What changed and why:
+--   * mason-lspconfig 2.0 removed `setup_handlers`, which the previous version was
+--     built on. It failed with "attempt to call field 'setup_handlers' (a nil value)".
+--     Servers are now configured with vim.lsp.config() and enabled automatically.
+--   * `tsserver` was renamed `ts_ls` upstream.
+--   * efm-langserver is gone. It was configured to run ruff and eslint over the same
+--     filetypes that nvim-lint already lints and conform already formats, so every
+--     violation was reported twice and up to three formatters competed on save.
+--     nvim-lint owns linting; conform owns formatting.
+--   * neodev.nvim is deprecated; lua_ls gets its library paths directly instead.
 return {
 	"neovim/nvim-lspconfig",
 	event = { "BufReadPre", "BufNewFile" },
 	dependencies = {
-		"hrsh7th/cmp-nvim-lsp",
+		"saghen/blink.cmp",
 		{ "antosha417/nvim-lsp-file-operations", config = true },
-		{ "folke/neodev.nvim", opts = {} },
-		"williamboman/mason.nvim",
-		"hrsh7th/nvim-cmp",
-		"hrsh7th/cmp-buffer",
-		"windwp/nvim-autopairs",
-		"creativenull/efmls-configs-nvim",
+		"mason-org/mason.nvim",
+		"mason-org/mason-lspconfig.nvim",
+		"ibhagwan/fzf-lua",
 	},
 	config = function()
-		local lspconfig = require("lspconfig")
-		local cmp_nvim_lsp = require("cmp_nvim_lsp")
-		local mason_lspconfig = require("mason-lspconfig")
 		local keymap = vim.keymap
 
-		-- Keybindings setup
 		vim.api.nvim_create_autocmd("LspAttach", {
 			group = vim.api.nvim_create_augroup("UserLspConfig", {}),
 			callback = function(ev)
 				local opts = { buffer = ev.buf, noremap = true, silent = true }
 
-				-- Set keybinds
-				keymap.set("n", "gR", "<cmd>Telescope lsp_references<CR>", opts)
+				keymap.set("n", "gR", "<cmd>FzfLua lsp_references<CR>", opts)
 				keymap.set("n", "gD", vim.lsp.buf.declaration, opts)
-				keymap.set("n", "gd", "<cmd>Telescope lsp_definitions<CR>", opts)
-				keymap.set("n", "gi", "<cmd>Telescope lsp_implementations<CR>", opts)
-				keymap.set("n", "gt", "<cmd>Telescope lsp_type_definitions<CR>", opts)
+				keymap.set("n", "gd", "<cmd>FzfLua lsp_definitions<CR>", opts)
+				keymap.set("n", "gi", "<cmd>FzfLua lsp_implementations<CR>", opts)
+				keymap.set("n", "gt", "<cmd>FzfLua lsp_typedefs<CR>", opts)
 				keymap.set({ "n", "v" }, "<leader>ca", vim.lsp.buf.code_action, opts)
 				keymap.set("n", "<leader>rn", vim.lsp.buf.rename, opts)
-				keymap.set("n", "<leader>D", "<cmd>Telescope diagnostics bufnr=0<CR>", opts)
+				keymap.set("n", "<leader>D", "<cmd>FzfLua diagnostics_document<CR>", opts)
 				keymap.set("n", "<leader>d", vim.diagnostic.open_float, opts)
-				keymap.set("n", "[d", vim.diagnostic.goto_prev, opts)
-				keymap.set("n", "]d", vim.diagnostic.goto_next, opts)
-				keymap.set("n", "K", vim.lsp.buf.hover, opts)
-				keymap.set("n", "<leader>rs", ":LspRestart<CR>", opts)
 
-				-- Add format keybind
+				-- vim.diagnostic.goto_prev/goto_next were deprecated in 0.11 in favour
+				-- of vim.diagnostic.jump.
+				keymap.set("n", "[d", function()
+					vim.diagnostic.jump({ count = -1, float = true })
+				end, opts)
+				keymap.set("n", "]d", function()
+					vim.diagnostic.jump({ count = 1, float = true })
+				end, opts)
+
+				keymap.set("n", "K", vim.lsp.buf.hover, opts)
+				keymap.set("n", "<leader>rs", "<cmd>LspRestart<CR>", opts)
+
 				opts.desc = "Format current buffer"
 				keymap.set("n", "<leader>bf", function()
 					vim.lsp.buf.format({ async = true })
 				end, opts)
 
-				-- Add Pyright-specific keybind
-				if vim.lsp.get_client_by_id(ev.data.client_id).name == "pyright" then
+				local client = vim.lsp.get_client_by_id(ev.data.client_id)
+				if client and client.name == "pyright" then
 					opts.desc = "Organize Imports"
 					keymap.set("n", "<leader>oi", "<cmd>PyrightOrganizeImports<CR>", opts)
 				end
 			end,
 		})
 
-		-- Capabilities for autocompletion
-		local capabilities = cmp_nvim_lsp.default_capabilities()
+		-- Diagnostic presentation. vim.diagnostic.config is the supported route in
+		-- 0.10+; the old sign_define loop is no longer the recommended way.
+		vim.diagnostic.config({
+			virtual_text = true,
+			severity_sort = true,
+			float = { border = "rounded", source = true },
+			signs = {
+				text = {
+					[vim.diagnostic.severity.ERROR] = " ",
+					[vim.diagnostic.severity.WARN] = " ",
+					[vim.diagnostic.severity.HINT] = "󰠠 ",
+					[vim.diagnostic.severity.INFO] = " ",
+				},
+			},
+		})
 
-		-- Diagnostic signs
-		local signs = { Error = " ", Warn = " ", Hint = "󰠠 ", Info = " " }
-		for type, icon in pairs(signs) do
-			local hl = "DiagnosticSign" .. type
-			vim.fn.sign_define(hl, { text = icon, texthl = hl, numhl = "" })
-		end
+		local capabilities = require("blink.cmp").get_lsp_capabilities()
 
-		-- Default handler for installed servers
-		local function default_handler(server_name)
-			lspconfig[server_name].setup({
-				capabilities = capabilities,
-			})
-		end
+		-- Applies to every server, including ones installed later.
+		vim.lsp.config("*", { capabilities = capabilities })
 
-		-- Server-specific setups
-		local server_setups = {
-			lua_ls = function()
-				lspconfig.lua_ls.setup({
-					capabilities = capabilities,
-					settings = {
-						Lua = {
-							diagnostics = { globals = { "vim" } },
-							workspace = {
-								library = {
-									[vim.fn.expand("$VIMRUNTIME/lua")] = true,
-									[vim.fn.stdpath("config") .. "/lua"] = true,
-								},
-							},
-							completion = { callSnippet = "Replace" },
+		vim.lsp.config("lua_ls", {
+			settings = {
+				Lua = {
+					diagnostics = { globals = { "vim" } },
+					workspace = {
+						library = {
+							vim.fn.expand("$VIMRUNTIME/lua"),
+							vim.fn.stdpath("config") .. "/lua",
 						},
+						checkThirdParty = false,
 					},
-				})
-			end,
-			pyright = function()
-				lspconfig.pyright.setup({
-					capabilities = capabilities,
-					settings = {
-						python = {
-							analysis = {
-								typeCheckingMode = "off", -- Disable type checking as we'll use Ruff for this
-							},
-						},
+					completion = { callSnippet = "Replace" },
+				},
+			},
+		})
+
+		vim.lsp.config("pyright", {
+			settings = {
+				python = {
+					analysis = {
+						-- Previously "off", justified with "we'll use Ruff for this".
+						-- Ruff is a linter and formatter and does not type check, so
+						-- that left the setup with no type checking at all while
+						-- looking configured. "basic" restores it; ruff still owns
+						-- lint and format.
+						typeCheckingMode = "basic",
+						autoSearchPaths = true,
+						useLibraryCodeForTypes = true,
 					},
-				})
-			end,
-			clangd = function()
-				lspconfig.clangd.setup({
-					capabilities = capabilities,
-					cmd = { "clangd", "--offset-encoding=utf-16" },
-				})
-			end,
-			svelte = function()
-				lspconfig.svelte.setup({
-					capabilities = capabilities,
-					on_attach = function(client, bufnr)
-						vim.api.nvim_create_autocmd("BufWritePost", {
-							pattern = { "*.js", "*.ts" },
-							callback = function(ctx)
-								client.notify("$/onDidChangeTsOrJsFile", { uri = ctx.match })
-							end,
-						})
+				},
+			},
+		})
+
+		vim.lsp.config("clangd", {
+			cmd = { "clangd", "--offset-encoding=utf-16" },
+		})
+
+		vim.lsp.config("ts_ls", {
+			filetypes = { "typescript", "typescriptreact", "javascript", "javascriptreact" },
+		})
+
+		vim.lsp.config("cssls", {
+			filetypes = { "css", "scss", "less" },
+		})
+
+		vim.lsp.config("graphql", {
+			filetypes = { "graphql", "gql", "svelte", "typescriptreact", "javascriptreact" },
+		})
+
+		vim.lsp.config("emmet_ls", {
+			filetypes = {
+				"html",
+				"typescriptreact",
+				"javascriptreact",
+				"css",
+				"sass",
+				"scss",
+				"less",
+				"svelte",
+			},
+		})
+
+		vim.lsp.config("svelte", {
+			on_attach = function(client)
+				vim.api.nvim_create_autocmd("BufWritePost", {
+					pattern = { "*.js", "*.ts" },
+					callback = function(ctx)
+						client:notify("$/onDidChangeTsOrJsFile", { uri = ctx.match })
 					end,
 				})
 			end,
-			graphql = function()
-				lspconfig.graphql.setup({
-					capabilities = capabilities,
-					filetypes = { "graphql", "gql", "svelte", "typescriptreact", "javascriptreact" },
-				})
-			end,
-			emmet_ls = function()
-				lspconfig.emmet_ls.setup({
-					capabilities = capabilities,
-					filetypes = {
-						"html",
-						"typescriptreact",
-						"javascriptreact",
-						"css",
-						"sass",
-						"scss",
-						"less",
-						"svelte",
-					},
-				})
-			end,
-			-- TypeScript and JavaScript
-			tsserver = function()
-				lspconfig.tsserver.setup({
-					capabilities = capabilities,
-					filetypes = { "typescript", "typescriptreact", "javascript", "javascriptreact" },
-					root_dir = lspconfig.util.root_pattern("package.json", "tsconfig.json", "jsconfig.json", ".git"),
-				})
-			end,
-
-			-- CSS
-			cssls = function()
-				lspconfig.cssls.setup({
-					capabilities = capabilities,
-					filetypes = { "css", "scss", "less" },
-				})
-			end,
-		}
-
-		-- Set up mason-lspconfig
-		mason_lspconfig.setup_handlers({
-			function(server_name)
-				if server_setups[server_name] then
-					server_setups[server_name]()
-				else
-					default_handler(server_name)
-				end
-			end,
 		})
-		local eslint = require("efmls-configs.linters.eslint")
-		local prettier = require("efmls-configs.formatters.prettier")
-		local stylelint = require("efmls-configs.linters.stylelint")
-		-- Set up EFM language server
-		local efmls_config = {
-			filetypes = {
-				"lua",
-				"python",
-				"markdown",
-				"docker",
-				"c",
-				"cpp",
-				"javascript",
-				"javascriptreact",
-				"typescript",
-				"typescriptreact",
-				"css",
-				"scss",
-				"less",
-				"html",
-			},
-			init_options = {
-				documentFormatting = true,
-				documentRangeFormatting = true,
-				hover = true,
-				documentSymbol = true,
-				codeAction = true,
-				completion = true,
-			},
-			settings = {
-				languages = {
-					lua = { require("efmls-configs.linters.luacheck"), require("efmls-configs.formatters.stylua") },
-					python = { require("efmls-configs.linters.ruff"), require("efmls-configs.formatters.ruff") },
-					markdown = { require("efmls-configs.formatters.prettier_d") },
-					docker = {
-						require("efmls-configs.linters.hadolint"),
-						require("efmls-configs.formatters.prettier_d"),
-					},
-					c = { require("efmls-configs.formatters.clang_format"), require("efmls-configs.linters.cpplint") },
-					cpp = { require("efmls-configs.formatters.clang_format"), require("efmls-configs.linters.cpplint") },
-					yaml = { prettier },
-					json = { prettier },
-					javascript = { eslint, prettier },
-					javascriptreact = { eslint, prettier },
-					typescript = { eslint, prettier },
-					typescriptreact = { eslint, prettier },
-					css = { stylelint, prettier },
-					scss = { stylelint, prettier },
-					less = { stylelint, prettier },
-					html = { prettier },
-				},
-			},
-		}
-		lspconfig.efm.setup(efmls_config)
 	end,
 }

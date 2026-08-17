@@ -1,20 +1,12 @@
+-- Repositories moved from `williamboman` to the `mason-org` organisation.
 return {
-	"williamboman/mason.nvim",
+	"mason-org/mason.nvim",
 	dependencies = {
-		"williamboman/mason-lspconfig.nvim",
+		"mason-org/mason-lspconfig.nvim",
 		"WhoIsSethDaniel/mason-tool-installer.nvim",
 	},
 	config = function()
-		-- import mason
-		local mason = require("mason")
-
-		-- import mason-lspconfig
-		local mason_lspconfig = require("mason-lspconfig")
-
-		local mason_tool_installer = require("mason-tool-installer")
-
-		-- enable mason and configure icons
-		mason.setup({
+		require("mason").setup({
 			ui = {
 				icons = {
 					package_installed = "✓",
@@ -24,36 +16,39 @@ return {
 			},
 		})
 
-		mason_lspconfig.setup({
-			-- list of servers for mason to install
+		require("mason-lspconfig").setup({
 			ensure_installed = {
-				"efm",
+				-- "efm" removed: it duplicated nvim-lint's linting and conform's
+				-- formatting over the same filetypes, so diagnostics appeared twice.
+				-- "tsserver" is now "ts_ls" upstream; the old name fails to install.
+				-- "lua_ls" was listed twice.
 				"lua_ls",
 				"pyright",
 				"jsonls",
 				"clangd",
-				"tsserver",
+				"ts_ls",
 				"html",
 				"cssls",
 				"tailwindcss",
 				"svelte",
-				"lua_ls",
 				"graphql",
 				"emmet_ls",
 				"prismals",
 			},
-			-- auto-install configured servers (with lspconfig)
-			automatic_installation = true, -- not the same as ensure_installed
+			-- mason-lspconfig 2.x: installed servers are enabled automatically, which
+			-- is what replaced the setup_handlers mechanism.
+			automatic_enable = true,
 		})
-		mason_tool_installer.setup({
+
+		require("mason-tool-installer").setup({
 			ensure_installed = {
-				"prettier", -- prettier formatter
-				"stylua", -- lua formatter
-				"isort", -- python formatter
-				"black", -- python formatter
-				"pylint", -- python linter
-				"eslint_d",
+				"prettier",
+				"stylua",
+				-- isort, black and pylint were installed but never invoked: conform
+				-- formats Python with ruff and nvim-lint lints it with ruff. Ruff
+				-- covers all three.
 				"ruff",
+				"eslint_d",
 			},
 		})
 	end,

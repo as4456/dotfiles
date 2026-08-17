@@ -1,0 +1,21 @@
+# Targets to delete on apply.
+#
+# Deleting a file from the chezmoi source does NOT delete it from the destination —
+# chezmoi simply stops managing it and leaves the file in place. For most config that
+# is harmless, but lazy.nvim reads every .lua file in its plugins directory, so an
+# orphaned spec keeps re-cloning a plugin that was supposedly removed.
+#
+# These are the specs replaced in the August 2026 modernisation:
+#   comment.lua        -> Neovim 0.10+ has native gc/gcc; Comment.nvim unmaintained
+#   nvim-cmp.lua       -> blink.cmp
+#   telescope.lua      -> fzf-lua
+#   dressing.lua       -> snacks.nvim (dressing archived, author points here)
+#   vim-maximizer.lua  -> native toggle in core/keymaps.lua
+#
+# Safe to keep indefinitely: removing an already-absent path is a no-op. Delete these
+# lines once every machine you use has applied at least once.
+.config/nvim/lua/config/plugins/comment.lua
+.config/nvim/lua/config/plugins/nvim-cmp.lua
+.config/nvim/lua/config/plugins/telescope.lua
+.config/nvim/lua/config/plugins/dressing.lua
+.config/nvim/lua/config/plugins/vim-maximizer.lua

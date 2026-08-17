@@ -55,7 +55,7 @@ return {
 
 		keymap.set(
 			"n",
-			"<leader>m",
+			"<leader>em",
 			"<cmd>NvimTreeFocus<CR>",
 			{ desc = "Focus on the current file in file explorer", noremap = true, silent = true }
 		)
