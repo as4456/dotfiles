@@ -1,67 +1,105 @@
-# Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
-# Initialization code that may require console input (password prompts, [y/n]
-# confirmations, etc.) must go above this block; everything else may go below.
-if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
-  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
-fi
+# Managed by chezmoi. Edit with `chezmoi edit ~/.zshrc`.
+#
+# Prompt is starship, not Powerlevel10k. The p10k instant-prompt block that used to sit
+# at the top of this file is gone along with it; starship needs no instant-prompt hack
+# because it does not do the work that made one necessary.
 
-# Path to your oh-my-zsh installation.
+# ---------------------------------------------------------------- PATH bootstrap
+# This must come first, and it is not optional.
+#
+# zsh does NOT read ~/.profile — that is a bash/sh file — so the PATH entries set up
+# there never reach a zsh login shell. Without this block, ~/.local/bin and the mise
+# shims are absent, which means starship, nvim, fzf and zoxide are all missing. Every
+# line below that uses them is guarded with `command -v`, so they would skip in
+# silence and you would get a bare `hostname%` prompt with no error explaining why.
+case ":$PATH:" in
+*":$HOME/.local/bin:"*) ;;
+*) export PATH="$HOME/.local/bin:$PATH" ;;
+esac
+
+# ---------------------------------------------------------------- oh-my-zsh
 export ZSH="$HOME/.oh-my-zsh"
 
-# Set name of the theme to load
-ZSH_THEME="powerlevel10k/powerlevel10k"
+# Empty on purpose: starship owns the prompt. Setting a theme here would render one
+# prompt and then have starship overwrite it on every redraw.
+ZSH_THEME=""
 
-# Which plugins would you like to load?
-plugins=(git zsh-autosuggestions zsh-syntax-highlighting asdf)
+# asdf's oh-my-zsh plugin is deliberately absent — mise replaces it, and running both
+# means two shim directories competing to own `node` and `python` on PATH.
+plugins=(git zsh-autosuggestions zsh-syntax-highlighting)
 
-source $ZSH/oh-my-zsh.sh
+[ -f "$ZSH/oh-my-zsh.sh" ] && source "$ZSH/oh-my-zsh.sh"
 
-#alias for fd
-alias fd=fdfind
+# ---------------------------------------------------------------- toolchain
+# mise owns node, uv, neovim, starship, fzf, ripgrep, fd, lazygit and zoxide, so every
+# tool referenced further down this file becomes available only after this line runs.
+#
+# Called by absolute path, mirroring what ~/.bashrc does. `command -v mise` would be a
+# chicken-and-egg test: mise is what puts its own shims on PATH.
+[ -x "$HOME/.local/bin/mise" ] && eval "$("$HOME/.local/bin/mise" activate zsh)"
 
-# User configuration
+# ---------------------------------------------------------------- environment
 export COLORTERM=truecolor
-export PATH="$PATH:/opt/nvim-linux64/bin"
+export EDITOR=nvim
+export VISUAL=nvim
+
+# Neovim comes from mise, so no /opt/nvim-* on PATH. The old entry pointed at
+# /opt/nvim-linux64, a directory name upstream renamed to nvim-linux-x86_64.
 alias vim="nvim"
-alias pbcopy="xclip -selection clipboard"
-alias pbpaste="xclip -selection clipboard -o"
+alias vi="nvim"
 
-# Setup fzf keybindings
-# Set up fzf key bindings and fuzzy completion
-# source <(fzf --zsh)
-#
-#
-# asdf
-export ASDF_DIR="$HOME/.asdf"
-source "$HOME/.asdf/asdf.sh"
+# ---------------------------------------------------------------- clipboard
+# Under WSL, clip.exe reaches the Windows clipboard with no X server involved. xclip
+# needs WSLg running and only ever touches the Linux clipboard.
+if command -v clip.exe >/dev/null 2>&1; then
+  alias pbcopy="clip.exe"
+  alias pbpaste="powershell.exe -NoProfile -Command Get-Clipboard | tr -d '\r'"
+elif command -v xclip >/dev/null 2>&1; then
+  alias pbcopy="xclip -selection clipboard"
+  alias pbpaste="xclip -selection clipboard -o"
+fi
 
-# append completions to fpath
-fpath=(${ASDF_DIR}/completions $fpath)
+# ---------------------------------------------------------------- fzf
+# No `alias fd=fdfind`: mise installs the upstream binary under its real name, `fd`.
+# The alias existed because Debian and Ubuntu rename it — but an alias never applied
+# here anyway, since fzf runs FZF_DEFAULT_COMMAND through sh, where aliases do not
+# exist. That mismatch is why fzf silently found nothing on Linux.
+if command -v fd >/dev/null 2>&1; then
+  export FZF_DEFAULT_COMMAND="fd --hidden --strip-cwd-prefix --exclude .git"
+  export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
+  export FZF_ALT_C_COMMAND="fd --type=d --hidden --strip-cwd-prefix --exclude .git"
 
-# initialize completions with ZSH's compinit
-autoload -Uz compinit && compinit
+  _fzf_compgen_path() { fd --hidden --exclude .git . "$1"; }
+  _fzf_compgen_dir()  { fd --type=d --hidden --exclude .git . "$1"; }
+fi
 
-# To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
-[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+export FZF_DEFAULT_OPTS="--height 40% --layout=reverse --border --info=inline"
 
-[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+# Current fzf ships its own shell integration; ~/.fzf.zsh was the old install method.
+command -v fzf >/dev/null 2>&1 && source <(fzf --zsh)
 
-# -- Use fd instead of fzf --
+# Guarded, unlike the version this replaces — an unguarded source here threw on every
+# shell start for anyone who had not cloned the repo.
+[ -f "$HOME/fzf-git.sh/fzf-git.sh" ] && source "$HOME/fzf-git.sh/fzf-git.sh"
 
-export FZF_DEFAULT_COMMAND="fd --hidden --strip-cwd-prefix --exclude .git"
-export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
-export FZF_ALT_C_COMMAND="fd --type=d --hidden --strip-cwd-prefix --exclude .git"
+# ---------------------------------------------------------------- navigation
+command -v zoxide >/dev/null 2>&1 && eval "$(zoxide init zsh --cmd cd)"
 
-# Use fd (https://github.com/sharkdp/fd) for listing path candidates.
-# - The first argument to the function ($1) is the base path to start traversal
-# - See the source code (completion.{bash,zsh}) for the details.
-_fzf_compgen_path() {
-  fd --hidden --exclude .git . "$1"
-}
+# ---------------------------------------------------------------- completions
+# oh-my-zsh already runs compinit; calling it twice only costs startup time.
+if ! typeset -f compinit >/dev/null; then
+  autoload -Uz compinit && compinit
+fi
 
-# Use fd to generate the list for directory completion
-_fzf_compgen_dir() {
-  fd --type=d --hidden --exclude .git . "$1"
-}
+# ---------------------------------------------------------------- history
+HISTSIZE=50000
+SAVEHIST=50000
+HISTFILE="$HOME/.zsh_history"
+setopt HIST_IGNORE_ALL_DUPS
+setopt HIST_REDUCE_BLANKS
+setopt SHARE_HISTORY
+setopt EXTENDED_HISTORY
 
-source ~/fzf-git.sh/fzf-git.sh
+# ---------------------------------------------------------------- prompt
+# Last, so nothing can overwrite it.
+command -v starship >/dev/null 2>&1 && eval "$(starship init zsh)"

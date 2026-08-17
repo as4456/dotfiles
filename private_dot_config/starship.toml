@@ -1,0 +1,149 @@
+# Managed by chezmoi. Catppuccin Mocha palette, matching alacritty and tmux.
+#
+# Replaces Powerlevel10k. The layout is deliberately two-line: a long path plus git
+# state plus a Python version does not fit on one line at any sane terminal width, and
+# the alternative is truncating the thing you most need to read.
+
+"$schema" = 'https://starship.rs/config-schema.json'
+
+format = """
+[](surface0)\
+$os\
+$username\
+[](bg:peach fg:surface0)\
+$directory\
+[](fg:peach bg:green)\
+$git_branch\
+$git_status\
+[](fg:green bg:sapphire)\
+$python\
+$nodejs\
+$rust\
+$golang\
+[](fg:sapphire bg:lavender)\
+$docker_context\
+[](fg:lavender bg:surface0)\
+$cmd_duration\
+[ ](fg:surface0)\
+$line_break$character"""
+
+add_newline = true
+command_timeout = 1000
+
+[palettes.catppuccin_mocha]
+rosewater = "#f5e0dc"
+flamingo = "#f2cdcd"
+pink = "#f5c2e7"
+mauve = "#cba6f7"
+red = "#f38ba8"
+maroon = "#eba0ac"
+peach = "#fab387"
+yellow = "#f9e2af"
+green = "#a6e3a1"
+teal = "#94e2d5"
+sky = "#89dceb"
+sapphire = "#74c7ec"
+blue = "#89b4fa"
+lavender = "#b4befe"
+text = "#cdd6f4"
+surface2 = "#585b70"
+surface1 = "#45475a"
+surface0 = "#313244"
+base = "#1e1e2e"
+mantle = "#181825"
+crust = "#11111b"
+
+palette = "catppuccin_mocha"
+
+[os]
+disabled = false
+style = "bg:surface0 fg:text"
+
+[os.symbols]
+Ubuntu = " "
+Debian = " "
+Macos = " "
+Windows = " "
+Linux = " "
+
+[username]
+show_always = false
+style_user = "bg:surface0 fg:text"
+style_root = "bg:surface0 fg:red"
+format = '[ $user ]($style)'
+
+[directory]
+style = "fg:crust bg:peach"
+format = "[ $path ]($style)"
+truncation_length = 4
+truncation_symbol = "…/"
+# Nerd Font icons; the terminal is already configured for JetBrainsMono Nerd Font.
+read_only = " 󰌾"
+
+[directory.substitutions]
+"Documents" = "󰈙 "
+"Downloads" = " "
+"new_work" = " "
+".config" = " "
+
+[git_branch]
+symbol = ""
+style = "bg:green"
+format = '[[ $symbol $branch ](fg:crust bg:green)]($style)'
+
+[git_status]
+style = "bg:green"
+format = '[[($all_status$ahead_behind )](fg:crust bg:green)]($style)'
+conflicted = "= "
+ahead = "⇡${count} "
+behind = "⇣${count} "
+diverged = "⇕⇡${ahead_count}⇣${behind_count} "
+untracked = "? "
+stashed = "$ "
+modified = "! "
+staged = "+ "
+renamed = "» "
+deleted = "✘ "
+
+[python]
+symbol = " "
+style = "bg:sapphire"
+# Shows the venv name alongside the version, which is the thing you actually need to
+# know when several interpreters are installed.
+format = '[[ $symbol( $version)( \($virtualenv\)) ](fg:crust bg:sapphire)]($style)'
+detect_extensions = ["py"]
+detect_files = ["pyproject.toml", "requirements.txt", ".python-version", "uv.lock"]
+
+[nodejs]
+symbol = ""
+style = "bg:sapphire"
+format = '[[ $symbol( $version) ](fg:crust bg:sapphire)]($style)'
+
+[rust]
+symbol = ""
+style = "bg:sapphire"
+format = '[[ $symbol( $version) ](fg:crust bg:sapphire)]($style)'
+
+[golang]
+symbol = ""
+style = "bg:sapphire"
+format = '[[ $symbol( $version) ](fg:crust bg:sapphire)]($style)'
+
+[docker_context]
+symbol = ""
+style = "bg:lavender"
+format = '[[ $symbol( $context) ](fg:crust bg:lavender)]($style)'
+only_with_files = true
+
+[cmd_duration]
+min_time = 2000
+style = "bg:surface0"
+format = '[[  $duration ](fg:text bg:surface0)]($style)'
+
+[character]
+success_symbol = "[❯](bold green)"
+error_symbol = "[❯](bold red)"
+vimcmd_symbol = "[❮](bold green)"
+
+[line_break]
+disabled = false

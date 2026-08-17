@@ -1,0 +1,22 @@
+# zsh login shells read this; they never read ~/.profile, which is a bash/sh file.
+# This mirrors the PATH setup there so that non-interactive login invocations —
+# `wsl.exe -e zsh -lc '...'` from Windows, cron, editor integrations — resolve the same
+# tools an interactive shell does.
+#
+# ~/.zshrc handles the interactive case and sources mise properly. This file only
+# guarantees the binaries are reachable; it deliberately does no activation, because
+# shims work without a shell hook.
+
+if [ -d "$HOME/.local/bin" ]; then
+	case ":$PATH:" in
+	*":$HOME/.local/bin:"*) ;;
+	*) export PATH="$HOME/.local/bin:$PATH" ;;
+	esac
+fi
+
+if [ -d "$HOME/.local/share/mise/shims" ]; then
+	case ":$PATH:" in
+	*":$HOME/.local/share/mise/shims:"*) ;;
+	*) export PATH="$HOME/.local/share/mise/shims:$PATH" ;;
+	esac
+fi
