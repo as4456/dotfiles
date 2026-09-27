@@ -63,6 +63,15 @@ shell = { program = "wsl.exe", args = ["-d", "Ubuntu-24.04", "--cd", "~"] }
 key = "Return"
 mods = "Control|Shift"
 action = "SpawnNewInstance"
+{{- if eq .chezmoi.os "windows" }}
+
+[[keyboard.bindings]]
+# The default shell is WSL; this opens a separate window in Git Bash for work on the
+# Windows filesystem. -l -i so .bashrc activates the shared venv and loads config/.env.
+key = "G"
+mods = "Control|Shift"
+command = { program = "alacritty", args = ["--working-directory", 'C:\Users\asingh', "-e", 'C:\Program Files\Git\bin\bash.exe', "-l", "-i"] }
+{{- end }}
 
 # Catppuccin Mocha, inlined rather than imported. The committed config imported this
 # palette from /Users/asingh/... which does not exist off macOS, so the theme silently
