@@ -1,0 +1,3 @@
+# Every file is deployed by chezmoi as-is, and bash cannot run CRLF scripts.
+# eol=lf overrides core.autocrlf (true by default in Git for Windows).
+* text=auto eol=lf
