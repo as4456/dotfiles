@@ -33,3 +33,10 @@ opt.clipboard:append("unnamedplus") -- system clipboard as register
 -- split windows
 opt.splitright = true -- split vertical window to right
 opt.splitbelow = true -- split horiontal window to bottom
+
+-- Folding by syntax tree. treesitter.lua sets foldexpr per window, but foldmethod was
+-- still the default "manual", so zM / zR / za did nothing. Files open fully unfolded
+-- (foldlevel 99); zM folds everything, zR opens everything, za toggles one fold.
+opt.foldmethod = "expr"
+opt.foldlevel = 99
+opt.foldlevelstart = 99

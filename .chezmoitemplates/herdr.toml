@@ -1,0 +1,103 @@
+# Managed by chezmoi. Edit .chezmoitemplates/herdr.toml, not this file.
+#
+# One body, rendered per OS to ~/.config/herdr/config.toml (WSL/Linux, and Windows when
+# launched from Git Bash, whose XDG_CONFIG_HOME herdr honours first) and to
+# %APPDATA%\herdr\config.toml (Windows when launched from anywhere else).
+# Full reference: `herdr --default-config`. Apply edits live: `herdr server reload-config`.
+
+# The first-run notification prompt is answered below in [ui.toast].
+onboarding = false
+
+[terminal]
+{{- if eq .chezmoi.os "windows" }}
+# Panes run Git Bash, not cmd.exe, so they get the shared venv, mise tools and the
+# `claude` alias from ~/.bashrc. Login mode makes bash read .bash_profile -> .bashrc.
+default_shell = 'C:\Program Files\Git\bin\bash.exe'
+shell_mode = "login"
+{{- else }}
+# Empty default_shell means $SHELL, which is zsh.
+{{- end }}
+
+[keys]
+# Ctrl+a, the same prefix as tmux, for one set of muscle memory. herdr's default Ctrl+b
+# is also Claude Code's "background this task" key, so it had to move anyway. Never
+# run tmux inside herdr (or the reverse): both would claim Ctrl+a.
+prefix = "ctrl+a"
+
+# --- tmux parity -----------------------------------------------------------------
+# Same keys as private_dot_config/tmux/tmux.conf (and tmux's defaults it relies on), so
+# one set of muscle memory drives both. herdr's own defaults are kept alongside where
+# they differ, so its docs and `Ctrl+a ?` still apply.
+split_vertical = ["prefix+|", "prefix+backslash", "prefix+v"]   # tmux: C-a |
+split_horizontal = "prefix+minus"                               # tmux: C-a -
+# tmux.conf binds C-a h/j/k/l to RESIZE (navigation is C-h/j/k/l with no prefix), so
+# herdr follows suit instead of its default prefix+h/j/k/l = focus.
+resize_pane_left = "prefix+h"
+resize_pane_down = "prefix+j"
+resize_pane_up = "prefix+k"
+resize_pane_right = "prefix+l"
+zoom = ["prefix+z", "prefix+m"]                                  # tmux: C-a z / C-a m
+new_tab = "prefix+c"                                             # tmux window = herdr tab
+next_tab = ["prefix+n", "prefix+ctrl+n", "ctrl+alt+n"]           # tmux: C-a n / C-a C-n
+previous_tab = ["prefix+p", "prefix+ctrl+p", "ctrl+alt+p"]       # tmux: C-a p / C-a C-p
+rename_tab = ["prefix+comma", "prefix+shift+t"]                  # tmux: C-a ,
+close_tab = ["prefix+ampersand", "prefix+shift+x"]               # tmux: C-a &
+close_pane = "prefix+x"                                          # tmux: C-a x
+last_pane = "prefix+;"                                           # tmux: C-a ;
+detach = ["prefix+d", "prefix+q"]                                # tmux: C-a d
+reload_config = ["prefix+r", "prefix+shift+r"]                   # tmux: C-a r
+resize_mode = "prefix+shift+e"                                   # (r went to reload)
+edit_scrollback = ["prefix+[", "prefix+e"]                       # tmux: C-a [ (opens in nvim)
+
+# --- Direct shortcuts, no prefix -------------------------------------------------
+# Ctrl+Alt is the modifier family herdr's docs call safest: no shell, nvim or Claude Code
+# binding uses it. One chord instead of prefix-then-key for the moves made constantly.
+focus_pane_left = ["ctrl+alt+h", "prefix+left"]
+focus_pane_down = ["ctrl+alt+j", "prefix+down"]
+focus_pane_up = ["ctrl+alt+k", "prefix+up"]
+focus_pane_right = ["ctrl+alt+l", "prefix+right"]
+previous_workspace = "ctrl+alt+u"        # up the sidebar's space list
+next_workspace = "ctrl+alt+d"            # down the sidebar's space list
+next_agent = "ctrl+alt+a"
+previous_agent = "ctrl+alt+shift+a"
+open_notification_target = ["prefix+o", "ctrl+alt+o"]   # jump to the agent that needs you
+switch_tab = ["prefix+1..9", "ctrl+alt+1..9"]
+{{- if ne .chezmoi.os "windows" }}
+
+# Ctrl+h/j/k/l move between herdr panes, or are handed to nvim when the focused pane is
+# running nvim, which then moves between its own splits and falls through to herdr at
+# the edge. The action comes from `herdr plugin install aimdevlee/herdr-nvim-nav`; the
+# nvim half is lua/config/plugins/herdr-nvim-nav.lua. Linux only: the plugin uses a
+# Unix socket. On Windows use prefix+h/j/k/l.
+[[keys.command]]
+key = "ctrl+h"
+type = "plugin_action"
+command = "herdr-nvim-nav.left"
+
+[[keys.command]]
+key = "ctrl+j"
+type = "plugin_action"
+command = "herdr-nvim-nav.down"
+
+[[keys.command]]
+key = "ctrl+k"
+type = "plugin_action"
+command = "herdr-nvim-nav.up"
+
+[[keys.command]]
+key = "ctrl+l"
+type = "plugin_action"
+command = "herdr-nvim-nav.right"
+{{- end }}
+
+[[keys.command]]
+# lazygit in a popup over the current tab, for reviewing what an agent changed.
+key = "prefix+alt+g"
+type = "popup"
+command = "lazygit"
+width = "90%"
+height = "90%"
+
+[ui.toast]
+# In-app toast when an agent in another workspace finishes or needs input.
+delivery = "herdr"

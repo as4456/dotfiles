@@ -53,6 +53,14 @@ return {
 		config = function()
 			require("nvim-treesitter").setup()
 
+			-- The Windows tree-sitter CLI is an MSVC build, so it reaches for cl.exe
+			-- unless told otherwise. rtools' MinGW gcc is on PATH and builds the parsers
+			-- fine. Scoped to Neovim rather than exported from .bashrc, so R and other
+			-- builds keep their own compiler choice.
+			if vim.fn.has("win32") == 1 and not vim.env.CC and vim.fn.executable("gcc") == 1 then
+				vim.env.CC = "gcc"
+			end
+
 			local has_cc = vim.fn.executable("cc") == 1
 				or vim.fn.executable("gcc") == 1
 				or vim.fn.executable("clang") == 1

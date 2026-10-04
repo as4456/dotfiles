@@ -31,6 +31,13 @@ keymap.set("n", "<leader>tx", "<cmd>tabclose<CR>", { desc = "Close current tab" 
 keymap.set("n", "<leader>tn", "<cmd>tabn<CR>", { desc = "Go to next tab" })
 keymap.set("n", "<leader>tp", "<cmd>tabp<CR>", { desc = "Go to previous tab" })
 keymap.set("n", "<leader>tf", "<cmd>tabnew %<CR>", { desc = "Open current buffer in new tab" })
+-- A shell in a split along the bottom; the same key hides it again and the shell keeps
+-- running. snacks.nvim's terminal is already loaded (claudecode uses it). Normal mode
+-- only: a Space-prefixed map in terminal mode would stall every space typed in a shell.
+-- From inside the terminal: Ctrl-k back to the code, then <leader>tt to hide it.
+keymap.set("n", "<leader>tt", function()
+	Snacks.terminal.toggle(nil, { win = { position = "bottom", height = 0.3 } })
+end, { desc = "Toggle terminal" })
 
 -- Comments.
 -- Ctrl+/ was previously mapped to "gtc" and "goc", which are not commenting mappings
@@ -56,6 +63,34 @@ keymap.set("n", "<C-Down>", "<cmd>resize -2<CR>", { desc = "Decrease window heig
 keymap.set("n", "<C-Left>", "<cmd>vertical resize -2<CR>", { desc = "Decrease window width" })
 keymap.set("n", "<C-Right>", "<cmd>vertical resize +2<CR>", { desc = "Increase window width" })
 
+-- Terminal windows (the iron REPL, the Claude Code split).
+-- In terminal mode every key goes to the program inside, so leaving needed
+-- Ctrl-\ Ctrl-n and then a window motion. These make Ctrl-h/j/k/l work straight from
+-- a terminal, exactly as they do from a normal buffer: drop to normal mode, then replay
+-- the key so whichever navigator owns <C-h> handles it (vim-tmux-navigator, or
+-- herdr-nvim-nav under herdr), which means the chord also crosses tmux/herdr panes.
+-- Cost: the program inside never sees these four keys. ipython's Ctrl-L clear is
+-- <leader>cl instead; Claude Code's Ctrl-J newline is Shift+Enter instead.
+for _, key in ipairs({ "<C-h>", "<C-j>", "<C-k>", "<C-l>" }) do
+	keymap.set("t", key, "<C-\\><C-n>" .. key, { remap = true, desc = "Leave terminal and move window" })
+end
+
+-- Coming back to a terminal window should mean typing into it, not landing in normal
+-- mode over its scrollback. snacks.nvim already does this for the Claude split; this
+-- covers every other terminal, the iron REPL included.
+-- Scheduled and re-checked: iron enters the new REPL window and then jumps back to the
+-- code, and an immediate startinsert would land in the code buffer instead.
+vim.api.nvim_create_autocmd("WinEnter", {
+	group = vim.api.nvim_create_augroup("TerminalAutoInsert", { clear = true }),
+	callback = function()
+		vim.schedule(function()
+			if vim.bo.buftype == "terminal" and vim.fn.mode() ~= "t" then
+				vim.cmd.startinsert()
+			end
+		end)
+	end,
+})
+
 -- Buffer navigation.
 -- Same missing-<cmd> defect as the resize mappings above: "bnext" was replayed as the
 -- keystrokes b, n, e, x, t.
@@ -72,6 +107,15 @@ keymap.set("n", "N", "Nzzzv", { desc = "Previous search result, centred" })
 -- Move the selection up and down, reindenting as it goes.
 keymap.set("v", "J", ":m '>+1<CR>gv=gv", { desc = "Move selection down" })
 keymap.set("v", "K", ":m '<-2<CR>gv=gv", { desc = "Move selection up" })
+
+-- VS Code's Alt+Up/Down "move line", as Alt+j/k in every mode. (herdr owns Ctrl+Alt,
+-- plain Alt is free.) Copying a line down/up stays native: yyp / yyP.
+keymap.set("n", "<A-j>", "<cmd>m .+1<CR>==", { desc = "Move line down" })
+keymap.set("n", "<A-k>", "<cmd>m .-2<CR>==", { desc = "Move line up" })
+keymap.set("i", "<A-j>", "<Esc><cmd>m .+1<CR>==gi", { desc = "Move line down" })
+keymap.set("i", "<A-k>", "<Esc><cmd>m .-2<CR>==gi", { desc = "Move line up" })
+keymap.set("v", "<A-j>", ":m '>+1<CR>gv=gv", { desc = "Move selection down" })
+keymap.set("v", "<A-k>", ":m '<-2<CR>gv=gv", { desc = "Move selection up" })
 
 -- Keep the register when pasting over a selection.
 keymap.set("x", "<leader>p", [["_dP]], { desc = "Paste without clobbering register" })

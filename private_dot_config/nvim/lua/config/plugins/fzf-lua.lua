@@ -21,6 +21,9 @@ return {
 		{ "<leader>fk", "<cmd>FzfLua keymaps<cr>", desc = "Search keymaps" },
 		{ "<leader>fs", "<cmd>FzfLua resume<cr>", desc = "Resume last picker" },
 		{ "<leader>ft", "<cmd>TodoFzfLua<cr>", desc = "Find todos" },
+		-- "Go to symbol" (VS Code Ctrl+Shift+O / Ctrl+T): needs a language server.
+		{ "<leader>fo", "<cmd>FzfLua lsp_document_symbols<cr>", desc = "Symbols in this file (outline)" },
+		{ "<leader>fw", "<cmd>FzfLua lsp_live_workspace_symbols<cr>", desc = "Symbols in the workspace" },
 	},
 	opts = {
 		{ "telescope" },

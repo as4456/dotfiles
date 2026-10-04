@@ -63,6 +63,14 @@ shell = { program = "wsl.exe", args = ["-d", "Ubuntu-24.04", "--cd", "~"] }
 key = "Return"
 mods = "Control|Shift"
 action = "SpawnNewInstance"
+
+[[keyboard.bindings]]
+# Newline instead of submit in Claude Code's prompt. By default Shift+Enter sends the
+# same bare CR as Enter; ESC+CR is the Meta+Enter sequence Claude Code reads as
+# "insert newline".
+key = "Return"
+mods = "Shift"
+chars = "\u001B\r"
 {{- if eq .chezmoi.os "windows" }}
 
 [[keyboard.bindings]]
@@ -71,6 +79,22 @@ action = "SpawnNewInstance"
 key = "G"
 mods = "Control|Shift"
 command = { program = "alacritty", args = ["--working-directory", 'C:\Users\asingh', "-e", 'C:\Program Files\Git\bin\bash.exe', "-l", "-i"] }
+
+[[keyboard.bindings]]
+# Herdr on native Windows (beta), for multi-agent work on Windows projects. Launched
+# through Git Bash so .bashrc repairs PATH first: this window is spawned by the running
+# Alacritty, whose environment may predate a tool install. Herdr's panes are Git Bash
+# too (see herdr.toml).
+key = "H"
+mods = "Control|Shift"
+command = { program = "alacritty", args = ["--working-directory", 'C:\Users\asingh', "-e", 'C:\Program Files\Git\bin\bash.exe', "-l", "-i", "-c", "herdr"] }
+
+[[keyboard.bindings]]
+# Herdr inside WSL (stable build), for multi-agent work on Linux-side projects.
+# zsh -l -i so .zprofile/.zshrc put the mise shims, and therefore herdr, on PATH.
+key = "L"
+mods = "Control|Shift"
+command = { program = "alacritty", args = ["-e", "wsl.exe", "-d", "Ubuntu-24.04", "--cd", "~", "-e", "zsh", "-lic", "herdr"] }
 {{- end }}
 
 # Catppuccin Mocha, inlined rather than imported. The committed config imported this

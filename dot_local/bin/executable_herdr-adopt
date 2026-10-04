@@ -1,0 +1,123 @@
+#!/usr/bin/env bash
+# Managed by chezmoi.
+#
+# herdr-adopt — move Claude Code sessions running in loose terminal windows into herdr,
+# keeping every conversation.
+#
+#   herdr-adopt save    Record the Claude sessions running right now (any window).
+#   (exit each one)     In each old window: /exit (or Ctrl+C twice), then close it.
+#   herdr-adopt open    From inside herdr: reopen every recorded session that has exited,
+#                       one herdr space per project, `claude --resume <id>` per pane.
+#   herdr-adopt list    Show the recording, and which sessions are still running.
+#
+# `open --nvim` also puts nvim on the left of each space (Style B layout).
+#
+# Nothing is lost by exiting: Claude Code writes the conversation to disk as it goes,
+# and --resume reloads it. herdr-adopt never turns Remote Control on; Claude Code itself may
+# reconnect it for a session that already had it (run /rc again to disconnect).
+# A session that is still running is never opened twice: `open` skips it and says so.
+#
+# Source of truth: Claude Code's per-process files in ~/.claude/sessions/<pid>.json
+# (internal, undocumented). Works in WSL and Windows Git Bash. Needs jq.
+
+set -euo pipefail
+
+STATE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/herdr-adopt"
+STATE="$STATE_DIR/sessions.json"
+mkdir -p "$STATE_DIR"
+
+# Which Claude PIDs are alive. Windows PIDs are invisible to Git Bash's kill -0, so ask
+# tasklist once; on Linux kill -0 is enough.
+alive_pids() {
+	if command -v tasklist >/dev/null 2>&1; then
+		tasklist //FO CSV //NH 2>/dev/null | tr -d '\r"' | awk -F, 'tolower($1) ~ /claude/ {print $2}'
+	else
+		for f in "$HOME"/.claude/sessions/*.json; do
+			[ -e "$f" ] || continue
+			pid=$(basename "$f" .json)
+			kill -0 "$pid" 2>/dev/null && echo "$pid"
+		done
+	fi
+}
+
+running_sessions() { # JSON array of live interactive sessions, excluding this herdr's own panes' parent
+	local alive
+	alive=$(alive_pids | jq -R . | jq -s .)
+	cat "$HOME"/.claude/sessions/*.json 2>/dev/null | tr -d '\r' | jq -s --argjson alive "$alive" '
+		[ .[] | select(.kind == "interactive")
+		      | select((.pid | tostring) as $p | $alive | index($p))
+		      | { sessionId, pid, cwd, name, rc: (.bridgeSessionId != null) } ]'
+}
+
+cmd_save() {
+	running_sessions >"$STATE"
+	echo "Recorded $(jq length "$STATE") running Claude session(s) in $STATE:"
+	cmd_list
+	echo
+	echo "Next: in each of those windows run /exit (or press Ctrl+C twice) and close it."
+	echo "Then, inside herdr:  herdr-adopt open      (add --nvim for nvim beside each)"
+}
+
+cmd_list() {
+	[ -s "$STATE" ] || { echo "Nothing recorded yet. Run: herdr-adopt save"; return; }
+	local alive
+	alive=$(alive_pids | jq -R . | jq -s .)
+	jq -r --argjson alive "$alive" '
+		.[] | [ (if ((.pid | tostring) as $p | $alive | index($p)) then "running" else "exited " end),
+		        (if .rc then "RC" else "  " end),
+		        (.cwd | gsub("\\\\"; "/") | split("/") | last),
+		        .name, .sessionId ] | @tsv' "$STATE" | tr -d '\r' | column -t -s $'\t'
+}
+
+cmd_open() {
+	local with_nvim=0
+	[ "${1:-}" = "--nvim" ] && with_nvim=1
+	[ -s "$STATE" ] || { echo "Nothing recorded. Run: herdr-adopt save (before exiting the sessions)"; exit 1; }
+	herdr workspace list >/dev/null 2>&1 || { echo "Run this from inside herdr." >&2; exit 1; }
+
+	local alive
+	alive=$(alive_pids | jq -R . | jq -s .)
+
+	# Still-running sessions are skipped, never duplicated.
+	jq -r --argjson alive "$alive" '.[] | select((.pid | tostring) as $p | $alive | index($p)) | "  still running, skipped: \(.name) (pid \(.pid)) — exit it, then run herdr-adopt open again"' "$STATE" | tr -d '\r'
+
+	# One space per project directory; its sessions stack in the right-hand column.
+	jq -c --argjson alive "$alive" '
+		[ .[] | select(((.pid | tostring) as $p | $alive | index($p)) | not) ]
+		| group_by(.cwd)[]' "$STATE" | tr -d '\r' | while read -r group; do
+		cwd=$(printf '%s' "$group" | jq -r '.[0].cwd' | tr -d '\r')
+		label=$(printf '%s' "$cwd" | tr '\\' '/' | sed 's:/*$::; s:.*/::')
+		ws=$(herdr workspace create --cwd "$cwd" --label "$label" --no-focus | tr -d '\r')
+		first=$(printf '%s' "$ws" | jq -r '.result.root_pane.pane_id // .result.workspace.active_pane_id // empty')
+		pane=$first
+		if [ "$with_nvim" = 1 ]; then
+			herdr pane run "$first" "nvim ." >/dev/null
+			pane=""
+		fi
+		n=0
+		printf '%s' "$group" | jq -r '.[] | .sessionId' | tr -d '\r' | while read -r sid; do
+			n=$((n + 1))
+			ide=""
+			[ "$with_nvim" = 1 ] && [ "$n" = 1 ] && ide="--ide"
+			if [ -z "$pane" ]; then
+				pane=$(herdr pane split "$first" --direction right --ratio 0.45 --cwd "$cwd" | tr -d '\r' | jq -r '.result.pane.pane_id')
+			elif [ "$n" -gt 1 ]; then
+				pane=$(herdr pane split "$pane" --direction down --cwd "$cwd" | tr -d '\r' | jq -r '.result.pane.pane_id')
+			fi
+			herdr pane run "$pane" "claude --resume $sid $ide" >/dev/null
+			echo "  opened $label: $sid"
+		done
+	done
+
+	# Forget what was opened; keep anything skipped for the next run.
+	jq --argjson alive "$alive" '[ .[] | select((.pid | tostring) as $p | $alive | index($p)) ]' "$STATE" >"$STATE.tmp" && mv "$STATE.tmp" "$STATE"
+	echo "Done. Switch spaces in the sidebar (or Ctrl+Alt+U / Ctrl+Alt+D)."
+}
+
+case "${1:-list}" in
+save) cmd_save ;;
+open) shift; cmd_open "$@" ;;
+list) cmd_list ;;
+-h | --help | help) sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//' ;;
+*) echo "usage: herdr-adopt save|open [--nvim]|list" >&2; exit 2 ;;
+esac

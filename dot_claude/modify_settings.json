@@ -1,0 +1,12 @@
+{{- /* chezmoi:modify-template */ -}}
+{{- /*
+  Claude Code rewrites settings.json itself (/config, /permissions, plugins), and the
+  Windows copy carries machine-specific hooks. So this template owns exactly one key,
+  statusLine, and passes every other key through untouched.
+*/ -}}
+{{- $s := dict -}}
+{{- if .chezmoi.stdin | trim -}}
+{{-   $s = .chezmoi.stdin | fromJson -}}
+{{- end -}}
+{{- $s = setValueAtPath "statusLine" (dict "type" "command" "command" "bash ~/.claude/statusline.sh" "padding" 0) $s -}}
+{{- toPrettyJson "  " $s }}

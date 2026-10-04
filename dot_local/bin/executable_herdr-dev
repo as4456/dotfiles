@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+# Managed by chezmoi.
+#
+# herdr-dev [DIR] [--agents N]
+#
+# Style B in one command: from inside herdr, open a workspace for DIR (default: the
+# current directory) named after it, with nvim on the left and Claude Code on the right.
+# --agents N adds N-1 more Claude panes stacked under the first, for parallel tasks.
+#
+# Claude starts with --ide, so it attaches to that nvim (claudecode.nvim is loaded at
+# startup and advertises itself in ~/.claude/ide/). Inside Claude, `/ide` shows or
+# changes the connection. Each agent is named after the project. Remote Control is NOT
+# started; run /rc in a pane when you want one session reachable from your phone.
+#
+# Works in WSL (zsh/bash) and Windows Git Bash. Needs jq.
+
+set -euo pipefail
+
+dir="."
+agents=1
+while [ $# -gt 0 ]; do
+	case "$1" in
+	--agents) agents="${2:?--agents needs a number}"; shift 2 ;;
+	-h | --help) sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+	*) dir="$1"; shift ;;
+	esac
+done
+
+dir="$(cd "$dir" && pwd)"
+name="$(basename "$dir")"
+
+# herdr.exe on Windows is a native program and wants a Windows path.
+herdr_dir="$dir"
+if command -v cygpath >/dev/null 2>&1; then
+	herdr_dir="$(cygpath -w "$dir")"
+fi
+
+if ! herdr workspace list >/dev/null 2>&1; then
+	echo "herdr-dev: no herdr server is running. Start herdr first (Alacritty: Ctrl+Shift+H on" >&2
+	echo "Windows, Ctrl+Shift+L for WSL), then run herdr-dev from one of its panes." >&2
+	exit 1
+fi
+
+json() { tr -d '\r' | jq -r "$1"; }
+
+ws="$(herdr workspace create --cwd "$herdr_dir" --label "$name" --focus)"
+editor_pane="$(printf '%s' "$ws" | json '.result.workspace.active_pane_id // .result.root_pane.pane_id // .result.pane.pane_id // empty')"
+if [ -z "$editor_pane" ]; then
+	# Fall back to asking for the workspace's panes.
+	ws_id="$(printf '%s' "$ws" | json '.result.workspace.workspace_id')"
+	editor_pane="$(herdr pane list | tr -d '\r' | jq -r --arg ws "$ws_id" '.result.panes[] | select(.workspace_id == $ws) | .pane_id' | head -1)"
+fi
+
+herdr pane run "$editor_pane" "nvim ." >/dev/null
+
+# --name makes the session's title the project name, so `claude --resume`, the status
+# line and, if you later run /rc, the phone/claude.ai list all show the same name.
+# Remote Control is deliberately not started here: it is opt-in, per session, via /rc.
+agent_pane="$(herdr pane split "$editor_pane" --direction right --ratio 0.45 --cwd "$herdr_dir" | json '.result.pane.pane_id')"
+herdr pane run "$agent_pane" "claude --ide --name '$name'" >/dev/null
+
+for i in $(seq 2 "$agents"); do
+	agent_pane="$(herdr pane split "$agent_pane" --direction down --cwd "$herdr_dir" | json '.result.pane.pane_id')"
+	# Only the first agent attaches to nvim (--ide): several agents opening diffs in one
+	# editor at once is confusing. The others still see the files on disk.
+	herdr pane run "$agent_pane" "claude --name '$name #$i'" >/dev/null
+done
+
+echo "herdr-dev: workspace '$name' ready: nvim + $agents Claude pane(s)."

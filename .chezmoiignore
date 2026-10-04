@@ -25,14 +25,22 @@ docs/**
 # Alacritty on Windows reads only %APPDATA%\alacritty\alacritty.toml and has no XDG
 # fallback, so that target exists solely for Windows.
 AppData/**
+# The Git Bash rc. WSL's ~/.bashrc is Ubuntu's stock file and is not managed.
+.bashrc
 {{- end }}
 
 {{- if eq .chezmoi.os "windows" }}
 # ...and conversely, the XDG location is meaningless there.
 .config/alacritty/**
-# These all live inside WSL on a Windows host, not in the Windows home directory.
+# herdr is NOT listed: on Windows it reads $XDG_CONFIG_HOME\herdr before %APPDATA%\herdr,
+# and the Git Bash .bashrc exports XDG_CONFIG_HOME (for nvim). So Windows gets both
+# targets, from one template: ~/.config/herdr when launched from Git Bash, AppData when
+# launched from anywhere else.
+# zsh and tmux live inside WSL on a Windows host, not in the Windows home directory.
 .zshrc
-.config/starship.toml
+.zprofile
 .config/tmux/**
-.config/nvim/**
+# Neovim and starship ARE applied on Windows, for Git Bash. starship reads
+# ~/.config/starship.toml natively; Neovim reads ~/.config/nvim only because the
+# Windows .bashrc exports XDG_CONFIG_HOME (its default is %LOCALAPPDATA%\nvim).
 {{- end }}

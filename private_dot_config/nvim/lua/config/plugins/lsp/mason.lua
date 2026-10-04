@@ -49,6 +49,9 @@ return {
 				-- covers all three.
 				"ruff",
 				"eslint_d",
+				-- Python debug adapter for nvim-dap (plugins/debug.lua). Mason gives it its
+				-- own venv, so debugging works without debugpy in every project venv.
+				"debugpy",
 			},
 		})
 	end,

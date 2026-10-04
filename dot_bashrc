@@ -1,0 +1,95 @@
+# Managed by chezmoi. Edit with `chezmoi edit ~/.bashrc`.
+#
+# Windows only: this is the rc for Git Bash, which Alacritty opens with Ctrl+Shift+G.
+# WSL keeps Ubuntu's stock ~/.bashrc and uses zsh anyway.
+
+# ──────────────────────────────────────────────────────────────
+# RenMac econometric work — Git Bash convenience setup
+# ──────────────────────────────────────────────────────────────
+
+# 1. Alias to scaffold new projects from anywhere
+alias newproj='/c/Users/asingh/new_work/econ-templates/scripts/new-econ-project.sh'
+
+# 2. Auto-load API keys from econ-templates/config/.env
+if [ -f /c/Users/asingh/new_work/econ-templates/config/.env ]; then
+    set -a
+    source /c/Users/asingh/new_work/econ-templates/config/.env
+    set +a
+fi
+
+# 3. Claude Code uses the claude.ai Team seat, not the ANTHROPIC_API_KEY loaded
+#    above (that key is for project scripts). Without this, every claude
+#    launched from Git Bash would bill the API key instead. Neovim cannot see
+#    this alias, so claudecode.nvim strips the key itself on Windows.
+alias claude='env -u ANTHROPIC_API_KEY claude'
+
+# ──────────────────────────────────────────────────────────────
+# Shared econometric venv — auto-activate
+# ──────────────────────────────────────────────────────────────
+export SHARED_VENV="/c/Users/asingh/envs/shared-3.10"
+
+if [ -f "$SHARED_VENV/Scripts/activate" ]; then
+    source "$SHARED_VENV/Scripts/activate"
+fi
+
+# Convenience: full path to venv python, for use in scripts/rules
+# where we can't rely on activation having happened.
+export ECON_PYTHON="$SHARED_VENV/Scripts/python"
+
+# ──────────────────────────────────────────────────────────────
+# Dev environment — mirrors the WSL ~/.zshrc
+# ──────────────────────────────────────────────────────────────
+
+# mise owns fd, fzf, lazygit, node, starship, stylua, tree-sitter and zoxide. Its shims
+# directory, mise.exe itself and Neovim are all on the Windows PATH, so no
+# `mise activate` hook is needed.
+#
+# But a process only gets the PATH that existed when it started, and Ctrl+Shift+G
+# spawns this shell from the running Alacritty, which may predate an install. So add
+# the dirs here when missing. mise.exe matters as much as the shims: every shim execs
+# it, and without it each `eval "$(fzf --bash)"` below prints "mise-shim: failed".
+_path_add() { case ":$PATH:" in *":$1:"*) ;; *) [ -d "$1" ] && export PATH="$1:$PATH" ;; esac; }
+_path_add "/c/Program Files/Neovim/bin"
+for _d in "$(cygpath -u "$LOCALAPPDATA")"/Microsoft/WinGet/Packages/jdx.mise_*/mise/bin; do _path_add "$_d"; done
+_path_add "$(cygpath -u "$LOCALAPPDATA")/mise/shims"
+unset -f _path_add; unset _d
+
+# Neovim on Windows defaults to %LOCALAPPDATA%\nvim. Pointing XDG_CONFIG_HOME at
+# ~/.config lets it share the chezmoi-managed config with WSL unchanged. Set here, not
+# as a global Windows variable, so other Windows apps keep their usual config paths.
+export XDG_CONFIG_HOME="$HOME/.config"
+
+export COLORTERM=truecolor
+export EDITOR=nvim
+export VISUAL=nvim
+alias vim="nvim"
+alias vi="nvim"
+
+# Git for Windows ships clip.exe on PATH, same as WSL.
+alias pbcopy="clip.exe"
+alias pbpaste="powershell.exe -NoProfile -Command Get-Clipboard | tr -d '\r'"
+
+if command -v fd >/dev/null 2>&1; then
+  export FZF_DEFAULT_COMMAND="fd --hidden --strip-cwd-prefix --exclude .git"
+  export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
+  export FZF_ALT_C_COMMAND="fd --type=d --hidden --strip-cwd-prefix --exclude .git"
+fi
+export FZF_DEFAULT_OPTS="--height 40% --layout=reverse --border --info=inline"
+
+# Interactive shells only: these bind keys and rewrite the prompt.
+if [[ $- == *i* ]]; then
+  command -v fzf >/dev/null 2>&1 && eval "$(fzf --bash)"
+
+  HISTSIZE=50000
+  HISTFILESIZE=50000
+  HISTCONTROL=ignoreboth:erasedups
+  shopt -s histappend
+
+  # starship shows the active venv itself.
+  command -v starship >/dev/null 2>&1 && eval "$(starship init bash)"
+
+  # After starship, not before: in bash both hook PROMPT_COMMAND, and starship's init
+  # replaces a hook installed ahead of it. zoxide then never records directories (its
+  # doctor check warns about exactly this).
+  command -v zoxide >/dev/null 2>&1 && eval "$(zoxide init bash --cmd cd)"
+fi
