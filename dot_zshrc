@@ -48,6 +48,12 @@ export VISUAL=nvim
 alias vim="nvim"
 alias vi="nvim"
 
+# The coding-templates scaffolder. It lived only in ~/.bashrc, so it silently
+# did not exist in the shell Alacritty actually spawns. Guarded because the repo
+# is not on every machine this zshrc reaches.
+[ -x "$HOME/new_work/coding-templates/scripts/new-code-project.sh" ] && \
+    alias newcode="$HOME/new_work/coding-templates/scripts/new-code-project.sh"
+
 # ---------------------------------------------------------------- clipboard
 # Under WSL, clip.exe reaches the Windows clipboard with no X server involved. xclip
 # needs WSLg running and only ever touches the Linux clipboard.
