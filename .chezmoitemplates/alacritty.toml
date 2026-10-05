@@ -71,6 +71,10 @@ action = "SpawnNewInstance"
 key = "Return"
 mods = "Shift"
 chars = "\u001B\r"
+
+# herdr's direct shortcuts are Alt+<key> (see herdr.toml). They need no bindings here:
+# Alacritty sends Alt+<key> as ESC+<key> by itself. Ctrl+Alt cannot be used on Windows,
+# where it is AltGr and never reaches the terminal, even through explicit bindings.
 {{- if eq .chezmoi.os "windows" }}
 
 [[keyboard.bindings]]

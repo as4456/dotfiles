@@ -108,14 +108,20 @@ keymap.set("n", "N", "Nzzzv", { desc = "Previous search result, centred" })
 keymap.set("v", "J", ":m '>+1<CR>gv=gv", { desc = "Move selection down" })
 keymap.set("v", "K", ":m '<-2<CR>gv=gv", { desc = "Move selection up" })
 
--- VS Code's Alt+Up/Down "move line", as Alt+j/k in every mode. (herdr owns Ctrl+Alt,
--- plain Alt is free.) Copying a line down/up stays native: yyp / yyP.
+-- VS Code's Alt+Up/Down "move line", as Alt+j/k in every mode. herdr deliberately takes
+-- no Alt+letter, so these reach nvim inside herdr too. Copy a line down/up: yyp / yyP.
 keymap.set("n", "<A-j>", "<cmd>m .+1<CR>==", { desc = "Move line down" })
 keymap.set("n", "<A-k>", "<cmd>m .-2<CR>==", { desc = "Move line up" })
 keymap.set("i", "<A-j>", "<Esc><cmd>m .+1<CR>==gi", { desc = "Move line down" })
 keymap.set("i", "<A-k>", "<Esc><cmd>m .-2<CR>==gi", { desc = "Move line up" })
 keymap.set("v", "<A-j>", ":m '>+1<CR>gv=gv", { desc = "Move selection down" })
 keymap.set("v", "<A-k>", ":m '<-2<CR>gv=gv", { desc = "Move selection up" })
+
+-- Alacritty sends Shift+Enter as ESC+CR so Claude Code gets a newline. Unmapped, nvim
+-- reads that as <M-CR> = Esc then Enter, which drops out of insert mode. Mapping it back
+-- to Enter keeps Shift+Enter in nvim exactly as before. Insert mode only: terminal
+-- windows (the Claude split) still pass ESC+CR through to Claude.
+keymap.set("i", "<M-CR>", "<CR>", { desc = "Shift+Enter = newline (Alacritty sends ESC+CR)" })
 
 -- Keep the register when pasting over a selection.
 keymap.set("x", "<leader>p", [["_dP]], { desc = "Paste without clobbering register" })

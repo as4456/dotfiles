@@ -26,7 +26,7 @@ Two ways to work. Same nvim config, same keys, on Windows (Git Bash) and WSL.
 |---|---|---|
 | `Ctrl-h/j/k/l` | anywhere in nvim, **including the REPL and Claude terminals** | move to the window in that direction |
 | `Ctrl-h/j/k/l` | WSL herdr | same, and crosses into neighbouring herdr panes at nvim's edge |
-| `Ctrl+Alt+h/j/k/l` | herdr, Windows and WSL | move between herdr panes without the prefix (on Windows Ctrl-hjkl stays inside nvim) |
+| `Alt+←↓↑→` | herdr, Windows and WSL | move between herdr panes without the prefix (on Windows Ctrl-hjkl stays inside nvim) |
 | `Esc Esc` | Claude split | leave terminal mode without moving |
 | `Ctrl-\ Ctrl-n` | any terminal | leave terminal mode without moving |
 
@@ -56,7 +56,7 @@ diffs in the nvim pane.
 |---|---|
 | `Ctrl+a \|` / `Ctrl+a -` | split right / down (tmux keys; `Ctrl+a v` also works) |
 | `Ctrl+a h/j/k/l` | resize the pane (as in tmux.conf) |
-| `Ctrl+Alt+n/p` · `Ctrl+Alt+u/d` · `Ctrl+Alt+o` | next/prev tab · prev/next space · agent that needs you |
+| `Ctrl+Alt+↑/↓` · `Alt+1…9` · `Ctrl+a o` | prev/next space · tab N · agent that needs you |
 | `Ctrl+a c` | new tab |
 | `Ctrl+a x` | close pane |
 | `Ctrl+a z` | zoom pane |
