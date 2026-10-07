@@ -12,8 +12,20 @@ return {
 		vim.cmd([[ highlight NvimTreeFolderArrowClosed guifg=#3FC5FF ]])
 		vim.cmd([[ highlight NvimTreeFolderArrowOpen guifg=#3FC5FF ]])
 
+		-- Sort order, toggled with <leader>es. Default is VS Code's "sort by modified":
+		-- most recently modified file first, folders still on top. Note it is
+		-- *modification* time: running a script doesn't move it, saving it does.
+		vim.g.nvim_tree_sorter = vim.g.nvim_tree_sorter or "modification_time"
+
 		-- configure nvim-tree
 		nvimtree.setup({
+			sort = {
+				-- A function so the toggle below can change the order without re-running setup.
+				sorter = function()
+					return vim.g.nvim_tree_sorter
+				end,
+				folders_first = true,
+			},
 			view = {
 				width = 35,
 				relativenumber = true,
@@ -68,5 +80,13 @@ return {
 		) -- toggle file explorer on current file
 		keymap.set("n", "<leader>ec", "<cmd>NvimTreeCollapse<CR>", { desc = "Collapse file explorer" }) -- collapse file explorer
 		keymap.set("n", "<leader>er", "<cmd>NvimTreeRefresh<CR>", { desc = "Refresh file explorer" }) -- refresh file explorer
+		keymap.set("n", "<leader>es", function()
+			vim.g.nvim_tree_sorter = vim.g.nvim_tree_sorter == "modification_time" and "name" or "modification_time"
+			require("nvim-tree.api").tree.reload()
+			vim.notify(
+				"File explorer sorted by "
+					.. (vim.g.nvim_tree_sorter == "name" and "name (A–Z)" or "last modified (newest first)")
+			)
+		end, { desc = "Toggle explorer sort: modified / name" })
 	end,
 }

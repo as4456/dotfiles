@@ -13,9 +13,9 @@
 --
 --   * A REPL that did not fill the height. `iron.view.right` opens a *floating*
 --     window, sized once at open, which also covered the right edge of the code. A
---     real split resizes with the terminal instead. It opens *below* the code window
---     (rightbelow), not at the far right, because the Claude Code split owns the right
---     edge: code top-left, REPL under it, Claude down the right.
+--     real split resizes with the terminal instead: a vertical split at the far right,
+--     full height, 40% wide. With the Claude split open as well, the two sit side by
+--     side on the right.
 local windows = vim.fn.has("win32") == 1
 local OPEN, CLOSE = "\27[200~", "\27[201~" -- bracketed paste markers
 
@@ -65,7 +65,7 @@ return {
 						command = { windows and "bash" or "zsh" },
 					},
 				},
-				repl_open_cmd = require("iron.view").split.rightbelow("35%"),
+				repl_open_cmd = require("iron.view").split.vertical.botright("40%"),
 			},
 			-- Iron doesn't set keymaps by default anymore.
 			keymaps = {

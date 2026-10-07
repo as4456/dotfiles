@@ -12,12 +12,11 @@ Two ways to work. Same nvim config, same keys, on Windows (Git Bash) and WSL.
 ## Layout (Style A)
 
 ```
-┌──────────────────────┬──────────────┐
-│ code                 │              │
-│                      │  Claude Code │   Space a c   toggle Claude
-├──────────────────────┤  (Space a c) │   Space r i   open ipython REPL
-│ ipython REPL (Sp r i)│              │   Ctrl-h/j/k/l  move, from any window,
-└──────────────────────┴──────────────┘                 terminals included
+┌──────────────────┬─────────────┬─────────────┐
+│ code             │ ipython     │ Claude Code │   Space r i   open ipython REPL
+│                  │ (Space r i) │ (Space a c) │   Space a c   toggle Claude
+│                  │             │             │   Ctrl-h/j/k/l  move, from any
+└──────────────────┴─────────────┴─────────────┘                 window, terminals too
 ```
 
 ## Moving around

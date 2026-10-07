@@ -81,15 +81,17 @@ branch=$(git -C "$cwd" symbolic-ref --short -q HEAD 2>/dev/null) ||
 # session on claude.ai in terminals that support links (Alacritty does).
 rc=""
 if [ -n "$rc_id" ]; then
-  # The title Remote Control shows is, in order: the name given to `/remote-control
-  # <name>` (or /rc), else /rename's title, else the AI title. session_name covers the
-  # last two; the first is only in the transcript, so take the latest such command
-  # from it (~80 ms on a 4 MB transcript, and only while Remote Control is on).
+  # The session's name is set by whichever came last: `/remote-control <name>` (or /rc),
+  # or `/rename <name>`. session_name reflects /rename and the AI title but not a name
+  # given to /rc, which is only in the transcript, so take the LATEST of those commands
+  # from it (~80 ms on a 4 MB transcript, and only while Remote Control is on). A bare
+  # `/rename` or `/rc` (no name) falls back to session_name.
   if [[ $input =~ \"transcript_path\"[[:space:]]*:[[:space:]]*\"([^\"]+)\" ]]; then
     transcript=${BASH_REMATCH[1]//\\\\/\\}
-    rc_arg=$(grep -o '<command-name>/\(remote-control\|rc\)</command-name>.\{0,160\}<command-args>[^<]*</command-args>' \
-      "$transcript" 2>/dev/null | tail -1 | sed 's/.*<command-args>\(.*\)<\/command-args>/\1/')
-    [ -n "$rc_arg" ] && rc_name=$rc_arg
+    last_cmd=$(grep -o '<command-name>/\(remote-control\|rc\|rename\)</command-name>.\{0,160\}<command-args>[^<]*</command-args>' \
+      "$transcript" 2>/dev/null | tail -1)
+    last_arg=$(printf '%s' "$last_cmd" | sed 's/.*<command-args>\(.*\)<\/command-args>/\1/')
+    [ -n "$last_arg" ] && rc_name=$last_arg
   fi
   rc_name=${rc_name:-remote}
   (( narrow )) && (( ${#rc_name} > 18 )) && rc_name="${rc_name:0:17}…"
